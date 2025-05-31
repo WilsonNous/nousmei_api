@@ -5,16 +5,20 @@ from database import get_db_connection
 import datetime
 import re
 
-app = FastAPI(title="API NousMEI",
-              description="API para cadastro de MEIs que desejam receber lembretes do DAS",
-              version="1.0.0")
+app = FastAPI(
+    title="API NousMEI",
+    description="API para cadastro de MEIs que desejam receber lembretes do DAS",
+    version="1.0.0"
+)
 
-# Configuração de CORS (em produção, restrinja os domínios!)
+# Configuração CORS completa
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["GET", "POST"],
+    allow_origins=["https://noustecnologia.com.br"],  # Restrito ao seu domínio
+    allow_credentials=True,
+    allow_methods=["POST", "OPTIONS"],  # Métodos explicitamente permitidos
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 class Interessado(BaseModel):
@@ -33,15 +37,13 @@ class Interessado(BaseModel):
     def validate_whatsapp(cls, v):
         if not v.isdigit():
             raise ValueError('WhatsApp deve conter apenas números')
-        if not v.startswith(('55')):
-            v = f'55{v}'  # Adiciona código do Brasil se faltar
         return v
 
     @validator('cnpj')
     def validate_cnpj(cls, v):
         if not v.isdigit():
             raise ValueError('CNPJ deve conter apenas números')
-        # Adicione aqui validação de dígitos verificadores se necessário
+        # Adicione validação de dígitos verificadores aqui se necessário
         return v
 
 @app.get("/", tags=["Health Check"])
@@ -63,7 +65,7 @@ async def cadastrar(interessado: Interessado):
     
     - **nome**: Nome completo (mín. 3 caracteres)
     - **email**: Opcional
-    - **whatsapp**: Com DDI brasileiro (55)
+    - **whatsapp**: Número com DDI (ex: 5511999999999)
     - **cnpj**: 14 dígitos
     """
     conn = None
@@ -89,7 +91,7 @@ async def cadastrar(interessado: Interessado):
         valores = (
             interessado.nome,
             interessado.email,
-            interessado.whatsapp,
+            f"55{interessado.whatsapp}",  # Garante DDI brasileiro
             interessado.cnpj,
             datetime.datetime.now()
         )
@@ -111,10 +113,11 @@ async def cadastrar(interessado: Interessado):
             conn.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Erro interno no servidor"
+            detail=str(e)  # Mostra o erro real em desenvolvimento
         )
     finally:
         if cursor:
             cursor.close()
         if conn:
             conn.close()
+          
