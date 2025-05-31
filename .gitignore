@@ -1,0 +1,39 @@
+# Arquivos do Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyd
+*.pyo
+*.so
+*.egg-info/
+*.egg
+.Python
+
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Arquivos de ambiente
+.env
+.env.local
+.env.dev
+.env.prod
+
+# IDE/Sistemas operacionais
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# Logs e banco de dados
+*.log
+*.sqlite
+*.db
+
+# Arquivos gerados pelo Render
+render.yaml
+
+# Arquivos de cache
+.cache/
