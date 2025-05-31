@@ -86,7 +86,6 @@ async def cadastrar(interessado: Interessado):
             INSERT INTO interessados_nousmei 
             (nome, email, whatsapp, cnpj, data_cadastro)
             VALUES (%s, %s, %s, %s, %s)
-            RETURNING id
         """
         valores = (
             interessado.nome,
@@ -97,8 +96,8 @@ async def cadastrar(interessado: Interessado):
         )
         
         cursor.execute(sql, valores)
+        novo_id = cursor.lastrowid  # Método específico do MySQL para obter o último ID inserido
         conn.commit()
-        novo_id = cursor.fetchone()['id']
         
         return {
             "status": "success",
@@ -113,11 +112,15 @@ async def cadastrar(interessado: Interessado):
             conn.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)  # Mostra o erro real em desenvolvimento
+            detail=f"Erro no servidor: {str(e)}"
         )
     finally:
         if cursor:
             cursor.close()
         if conn:
             conn.close()
-          
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+    
