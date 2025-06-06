@@ -54,6 +54,16 @@ async def health_check():
         "documentacao": "/docs"
     }
 
+@app.get("/admin/lista")
+def listar_interessados():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM interessados_nousmei ORDER BY data_cadastro DESC")
+    resultado = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return resultado
+
 @app.post("/cadastrar", 
           status_code=status.HTTP_201_CREATED,
           tags=["Cadastro"],
