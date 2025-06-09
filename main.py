@@ -21,6 +21,7 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
+
 class Interessado(BaseModel):
     nome: constr(min_length=3, max_length=100, strip_whitespace=True)
     email: EmailStr | None = None
@@ -46,6 +47,7 @@ class Interessado(BaseModel):
         # Adicione validação de dígitos verificadores aqui se necessário
         return v
 
+
 @app.get("/", tags=["Health Check"])
 async def health_check():
     return {
@@ -53,6 +55,7 @@ async def health_check():
         "versao": "1.0.0",
         "documentacao": "/docs"
     }
+
 
 @app.get("/admin/lista")
 def listar_interessados():
@@ -64,7 +67,8 @@ def listar_interessados():
     conn.close()
     return resultado
 
-@app.post("/cadastrar", 
+
+@app.post("/cadastrar",
           status_code=status.HTTP_201_CREATED,
           tags=["Cadastro"],
           summary="Cadastra novo MEI",
@@ -72,7 +76,7 @@ def listar_interessados():
 async def cadastrar(interessado: Interessado):
     """
     Endpoint para cadastro de MEIs que desejam receber lembretes do DAS.
-    
+
     - **nome**: Nome completo (mín. 3 caracteres)
     - **email**: Opcional
     - **whatsapp**: Número com DDI (ex: 5511999999999)
@@ -83,7 +87,7 @@ async def cadastrar(interessado: Interessado):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        
+
         # Verifica duplicidade
         cursor.execute("SELECT id FROM interessados_nousmei WHERE cnpj = %s", (interessado.cnpj,))
         if cursor.fetchone():
@@ -94,27 +98,29 @@ async def cadastrar(interessado: Interessado):
 
         sql = """
             INSERT INTO interessados_nousmei 
-            (nome, email, whatsapp, cnpj, data_cadastro)
-            VALUES (%s, %s, %s, %s, %s)
+            (nome, email, whatsapp, cnpj, data_vencimento, data_cadastro)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
+
         valores = (
             interessado.nome,
             interessado.email,
-            f"55{interessado.whatsapp}",  # Garante DDI brasileiro
+            f"55{interessado.whatsapp}",
             interessado.cnpj,
+            interessado.data_vencimento,
             datetime.datetime.now()
         )
-        
+
         cursor.execute(sql, valores)
         novo_id = cursor.lastrowid  # Método específico do MySQL para obter o último ID inserido
         conn.commit()
-        
+
         return {
             "status": "success",
             "id": novo_id,
             "mensagem": "Cadastro realizado com sucesso"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -130,7 +136,8 @@ async def cadastrar(interessado: Interessado):
         if conn:
             conn.close()
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
-    
