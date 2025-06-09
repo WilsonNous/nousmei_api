@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, constr, validator
 from database import get_db_connection
-import datetime
+from datetime import datetime, date
 import re
 
 app = FastAPI(
@@ -11,22 +11,23 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configuração CORS completa
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://noustecnologia.com.br"],  # Restrito ao seu domínio
+    allow_origins=["https://noustecnologia.com.br"],
     allow_credentials=True,
-    allow_methods=["POST", "OPTIONS"],  # Métodos explicitamente permitidos
+    allow_methods=["POST", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"]
 )
 
-
+# MODELO DE DADOS
 class Interessado(BaseModel):
     nome: constr(min_length=3, max_length=100, strip_whitespace=True)
     email: EmailStr | None = None
     whatsapp: constr(min_length=11, max_length=11)
     cnpj: constr(min_length=14, max_length=14)
+    data_vencimento: date | None = None
 
     @validator('nome')
     def validate_nome(cls, v):
@@ -44,10 +45,10 @@ class Interessado(BaseModel):
     def validate_cnpj(cls, v):
         if not v.isdigit():
             raise ValueError('CNPJ deve conter apenas números')
-        # Adicione validação de dígitos verificadores aqui se necessário
         return v
 
 
+# ENDPOINT DE STATUS
 @app.get("/", tags=["Health Check"])
 async def health_check():
     return {
@@ -57,6 +58,7 @@ async def health_check():
     }
 
 
+# LISTAR TODOS OS INTERESSADOS
 @app.get("/admin/lista")
 def listar_interessados():
     conn = get_db_connection()
@@ -68,20 +70,13 @@ def listar_interessados():
     return resultado
 
 
+# CADASTRAR NOVO INTERESSADO
 @app.post("/cadastrar",
           status_code=status.HTTP_201_CREATED,
           tags=["Cadastro"],
           summary="Cadastra novo MEI",
           response_description="Cadastro realizado com sucesso")
 async def cadastrar(interessado: Interessado):
-    """
-    Endpoint para cadastro de MEIs que desejam receber lembretes do DAS.
-
-    - **nome**: Nome completo (mín. 3 caracteres)
-    - **email**: Opcional
-    - **whatsapp**: Número com DDI (ex: 5511999999999)
-    - **cnpj**: 14 dígitos
-    """
     conn = None
     cursor = None
     try:
@@ -108,11 +103,11 @@ async def cadastrar(interessado: Interessado):
             f"55{interessado.whatsapp}",
             interessado.cnpj,
             interessado.data_vencimento,
-            datetime.datetime.now()
+            datetime.now()
         )
 
         cursor.execute(sql, valores)
-        novo_id = cursor.lastrowid  # Método específico do MySQL para obter o último ID inserido
+        novo_id = cursor.lastrowid
         conn.commit()
 
         return {
@@ -139,5 +134,4 @@ async def cadastrar(interessado: Interessado):
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
